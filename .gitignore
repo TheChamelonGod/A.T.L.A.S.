@@ -1,0 +1,8 @@
+*.exe
+*.dll
+*.jpg
+*.png
+*.obj
+*.o
+build/
+C:/ATLAS/Temp/
