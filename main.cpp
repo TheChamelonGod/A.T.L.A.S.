@@ -15,8 +15,12 @@ namespace fs= std::filesystem;
 // Screenshot func
 // Bassically it asks Windows for the screens pickles(pixels) and makes them an OpenCV image.
 cv::Mat captureScreenMat() { //cvmat is poencv main image container, its like a 2d array of pickles but with more stuff, it has greyscale, rgba, kows the size, type, and had more funcs that i will use.
-    int width = GetSystemMetrics(SM_CXSCREEN); //Gets the x size of the sceen
-    int height = GetSystemMetrics(SM_CYSCREEN); //Gets the y size of the screen I FORGOT THE WORDS FOR THIS, TF IS IT CALLED???
+    int width = GetSystemMetrics(SM_CXSCREEN); //Gets the width size of the sceen 
+    int height = GetSystemMetrics(SM_CYSCREEN); //Gets the height of the screen. i have no idea how i forgot the words.
+
+    //Just to make sure that we start at top left of the screen, (I had some bugs)
+    int x = 0; 
+    int y = 0;
 
     HDC hwindowDC = GetDC(NULL); //DC is device context, Null because we dont want specific window (yet, ill do that once ive got the core done, prob gonna have to recode ts, gl future melon ;), we just want the whole screen.
     HDC hwindowCompatibleDC = CreateCompatibleDC(hwindowDC); //Creates a compatible DC which we got so we can copy pickles to it. (drawing)
@@ -25,7 +29,7 @@ cv::Mat captureScreenMat() { //cvmat is poencv main image container, its like a 
     SelectObject(hwindowCompatibleDC, hbwindow); //selects bitmap into the compatible DC,  so  allthings that go to DC goes to bitmap
 
     SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR); //sets how the images r scaled, coloron is the exact same quality as the screen(exactly like a screenshot) which is a bit much but idc as cause its taking a picture like every 10 sec.
-    StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, width, height, SRCCOPY); //copies pickles from screenDC --> bitmap DC
+    StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, x, y, width, height, SRCCOPY); //copies pickles from screenDC --> bitmap DC
 
     //defines bitmap format for opencv, (the width, heigh, and 32bitcolor top to bottom)
     BITMAPINFOHEADER bi;
@@ -49,8 +53,46 @@ cv::Mat captureScreenMat() { //cvmat is poencv main image container, its like a 
     return src;
 }
 
+// La pièce principale du puzzle (even tho i take FrencI didn't know how to say this so idk if thats the correct way to say it.)
+// This is where the iPhone type of timelapse comes in, veryy simplified and dumbed dow version of it tho. Idk if ill make it more complex l8tr.
+
+void AdaptiveClean(std::string folderPath, int& currentframecount, int& currentInterval) {
+    std::cout << "\n[Melontenance] Limit reached! Cleanse underway...\n" << std::endl;
+
+    int newIndex = 0; // Tracks new number numbering system
+    for (int i = 0; i < currentframecount; i++) { //loop
+        std::string oldFile = folderPath + "\\frame_" + std::to_string(i) + ".png"; //constructs filename
+
+        if (i % 2 == 1) { // If i is odd, executed
+            if (fs::exists(oldFile)) {
+                fs::remove(oldFile); //deletes file
+                std::cout << "Ded: " << oldFile <<std::endl; //ded :( *FUTURE MELON, Get rid of this after dont debugging!!!*
+            }
+        }
+        //if i is even, rename
+        else {
+            std::string newFile = folderPath + "\\frame_" + std::to_string(newIndex) + ".png"; //constructs new filename
+            //rename only if name changes, 0->0
+            if (oldFile != newFile && fs::exists(oldFile)) {
+                fs::rename(oldFile, newFile); //rename
+            }
+            newIndex++; //increment counter v2
+        }
+    }
+
+    currentframecount = newIndex; //we now have 1/2 frames
+    currentInterval = currentInterval*2; //x2 wait time
+
+    std::cout << "[Melontenance] Complete. Frames reduced to: " << currentframecount << std::endl;
+    std::cout << "[Melontenance] New Interval: " << currentInterval << "s\n" << std::endl;
+}
+
+// main :3
 int main() {
-    std::cout << "--- ATLAS STARTING ---" << std::endl;
+
+    SetProcessDPIAware(); //THE F$CKING NEW THINGY DOESNT WORK, it took me ~2 hours of doomscrolling on stackoverflow to give up and just use the old one. Shouldn't be an issue tho. NOT FORESHADOWING!
+
+    std::cout << "--- ATLAS ---" << std::endl;
 
     // This is where we will save the temp images, and maybe videos but i will make it so the user can choose the folder for vids l8tr.
     std::string storagepath = "C:\\ATLAS\\Temp"; //might change this to std::string(getenv("USERPROFILE")) + "\\ATLAS\\Temp"; becuase its possible it could not be able becuase of no acess. (not admin)
@@ -60,16 +102,30 @@ int main() {
         if (fs::create_directories(storagepath, ec)) { //creates folder, if there is an error it will be stored in ec
             std::cout << "Created folder: " << storagepath << std::endl;
         }else {
+            //delete all files at start.
+            for (const auto& entry : fs::directory_iterator(storagepath)) {
+                fs::remove_all(entry.path());
+            }
+
             std::cerr <<"Error: " << ec.message() << std::endl; //if an error in creating the folder, prints that there is an error and the windows error message. (Usually no acess or smth like that)
             return 1; //exit with error code
         }
     }
 
+    //config, ill actually make it configurable once gui is set up, not looking forward to that, gl future melon! wish u all the luck. ;)
+    const int maxframes = 20; //testing purposes, ofc it wont be this short
     int framecount = 0;
+    int captureint = 1; // capture interval is 1 sec
 
-    std::cout << "Recording - Press Ctrl+C to stop" << std::endl;
 
+    std::cout << "Recording - Limit set to " << maxframes << "frame. Press Ctrl+C to stop" << std::endl; //self exlpainable, i also dont really know what else to say for this so yeah...
+
+    //cleaning logic
     while (true) {
+        if (framecount >= maxframes) {
+            AdaptiveClean(storagepath, framecount, captureint);
+        } 
+
         // Capture the screen
         cv::Mat screenshot = captureScreenMat();
         //Checks if screen was empty or failed to capture
@@ -78,13 +134,12 @@ int main() {
             continue;
         }
 
-        std::string filename = storagepath + "\\frame_" + std::to_string(framecount) + ".jpg"; //constructs the filename, ill make options to save it with a jpg or png or anything else l8tr.
-
+        std::string filename = storagepath + "\\frame_" + std::to_string(framecount) + ".png"; //constructs the filename, ill make options to save it with a jpg or png or anything else l8tr. UPDATE, supposdly jpg only uses rgb??? might cuase issues so png is default.
         cv::imwrite(filename, screenshot); //writes image to disk, blocking call but we dont care bcause this is images
         std::cout <<  "Saved : " << filename << std::endl; //says it saved the image, (debug tool)
 
         framecount++; //increment frame count for next filename
-        std::this_thread::sleep_for(std::chrono::seconds(1)); //wait a sec before taking next screenshot. Will make this adaptive at some point, not looking forward to that, gl future melon! wish u all the luck. ;)
+        std::this_thread::sleep_for(std::chrono::seconds(captureint)); //wait a sec before taking next screenshot. Will make this *even more adaptive later, it wasnt as hard as i thought it would be, prob cause i did a very bare bones version and not an equation yet but hey, i got something working! Gl future melon!!
 
     }
 
