@@ -10,7 +10,10 @@ namespace fs = std::filesystem;
 struct AtlasSettings {
     int themeInd = 0; //default theme is 0
     char storagePath[256] = "C:\\ATLAS\\Temp"; //default path for temp is here, once i add the video encoding thing, it will/should go into C:\\ATLAS\\output or something like that
+    char outputPath[256]  = "C:\\ATLAS\\Output";
+    int exportFPS = 30;
     bool showStats = true; //for now debug (frames and capture int) will be visible
+    bool autoCloudUpload = true;
 };
 
 extern AtlasSettings settings;

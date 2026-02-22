@@ -53,7 +53,7 @@ int main(int, char**) {
     } else {
         io.Fonts->AddFontDefault();
     }
-    
+
     titleFont = io.Fonts->AddFontFromFileTTF(
     "C:\\Windows\\Fonts\\consola.ttf", 28.0f * scale);
     static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 };
@@ -265,7 +265,7 @@ int main(int, char**) {
         }
 
         ImGui::SetCursorPosY(ImGui::GetWindowHeight()-(25*scale));
-        ImGui::TextDisabled("v0.0.1 GUI");
+        ImGui::TextDisabled("v0.0.2 Timelapse Working!!!");
 
         ImGui::End();
         ImGui::PopStyleVar();

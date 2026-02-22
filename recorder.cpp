@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <opencv2/opencv.hpp>
+#include "exporter.h"
 
 std::string activewindowtitle() {
     char buffer[256];
@@ -91,7 +92,7 @@ void AdaptiveClean(std::string folderPath, int& currentframecount, int& currentI
 
 void backRecorder() {
     // idon even want to talk about the gui... ill make this configurable later, might do a multiple tab system so dont want to commit to anything rn
-    const int maxframes = 100; //testing purposes, ofc it wont be this short
+    const int maxframes = 500; //testing purposes, ofc it wont be this short
     int framecount = 0;
     int captureint = 1; // capture interval is 1 sec
 
@@ -140,4 +141,13 @@ void backRecorder() {
         sharedframecount.store(framecount);
     }
     logFile.close(); //stops once done recording, closes log file to save it properly. 
+        {
+        std::lock_guard<std::mutex> lock(windowMutex);
+        activewindow = "RENDERING VIDEO..."; // Tell UI we are working!
+    }
+    ExportVideo(currentPath, settings.outputPath, settings.exportFPS, framecount);     {
+        std::lock_guard<std::mutex> lock(windowMutex);
+        activewindow = "Render Complete!"; // Tell UI we are done!
+    }
+
 } 
